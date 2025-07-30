@@ -35,6 +35,71 @@ interface AdminProps {
   user: any;
 }
 
+// Dummy data for when backend is not available
+const dummyUsers: User[] = [
+  {
+    id: 7609121993,
+    username: 'admin',
+    firstName: 'Admin',
+    lastName: 'User',
+    balance: 10.0,
+    totalEarned: 15.0,
+    referrals: 5,
+    isNewUser: false,
+    hasWelcomeBonus: true,
+    freeFlips: 0,
+    joinDate: new Date().toISOString()
+  },
+  {
+    id: 1234567890,
+    username: 'user1',
+    firstName: 'John',
+    lastName: 'Doe',
+    balance: 5.5,
+    totalEarned: 8.0,
+    referrals: 2,
+    isNewUser: true,
+    hasWelcomeBonus: false,
+    freeFlips: 3,
+    joinDate: new Date(Date.now() - 86400000).toISOString()
+  }
+];
+
+const dummyRequests: Request[] = [
+  {
+    id: 1,
+    userId: 7609121993,
+    user: 'admin',
+    type: 'deposit',
+    amount: 5.0,
+    status: 'approved'
+  },
+  {
+    id: 2,
+    userId: 7609121993,
+    user: 'admin',
+    type: 'withdraw',
+    amount: 2.0,
+    status: 'pending'
+  },
+  {
+    id: 3,
+    userId: 1234567890,
+    user: 'user1',
+    type: 'deposit',
+    amount: 3.0,
+    status: 'pending'
+  }
+];
+
+const dummyStats: Stats = {
+  totalUsers: 2,
+  totalRequests: 3,
+  pendingRequests: 2,
+  totalDeposits: 5.0,
+  totalWithdrawals: 0
+};
+
 const API_URL = import.meta.env.VITE_BACKEND_URL + '/api';
 
 const Admin: React.FC<AdminProps> = ({ isAdmin, user }) => {
@@ -42,6 +107,7 @@ const Admin: React.FC<AdminProps> = ({ isAdmin, user }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [useDummyData, setUseDummyData] = useState(false);
   const [activeTab, setActiveTab] = useState<'requests' | 'users' | 'stats'>('requests');
 
   // Fetch data from backend
@@ -54,15 +120,24 @@ const Admin: React.FC<AdminProps> = ({ isAdmin, user }) => {
         fetch(`${API_URL}/stats`)
       ]);
       
-      const requestsData = await requestsRes.json();
-      const usersData = await usersRes.json();
-      const statsData = await statsRes.json();
-      
-      setRequests(requestsData);
-      setUsers(usersData);
-      setStats(statsData);
+      if (requestsRes.ok && usersRes.ok && statsRes.ok) {
+        const requestsData = await requestsRes.json();
+        const usersData = await usersRes.json();
+        const statsData = await statsRes.json();
+        
+        setRequests(requestsData);
+        setUsers(usersData);
+        setStats(statsData);
+        setUseDummyData(false);
+      } else {
+        throw new Error('Backend not available');
+      }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching data, using dummy data:', error);
+      setRequests(dummyRequests);
+      setUsers(dummyUsers);
+      setStats(dummyStats);
+      setUseDummyData(true);
     }
     setLoading(false);
   };
@@ -76,8 +151,20 @@ const Admin: React.FC<AdminProps> = ({ isAdmin, user }) => {
   // Approve/Reject
   const handleAction = async (id: number, action: 'approved' | 'rejected') => {
     try {
-      await fetch(`${API_URL}/requests/${id}/${action}`, { method: 'POST' });
-      fetchData(); // refresh data
+      if (!useDummyData) {
+        await fetch(`${API_URL}/requests/${id}/${action}`, { method: 'POST' });
+        fetchData(); // refresh data
+      } else {
+        // Update dummy data
+        setRequests(prev => prev.map(req => 
+          req.id === id ? { ...req, status: action } : req
+        ));
+        // Update stats
+        setStats(prev => prev ? {
+          ...prev,
+          pendingRequests: prev.pendingRequests - 1
+        } : null);
+      }
     } catch (error) {
       console.error('Error handling action:', error);
     }
@@ -130,6 +217,11 @@ const Admin: React.FC<AdminProps> = ({ isAdmin, user }) => {
       <div className="bg-dark-card p-6 rounded-xl border border-dark-border mb-6">
         <h1 className="text-2xl font-bold mb-2 text-white">🔐 Admin Panel</h1>
         <p className="text-white/70 mb-4">Selamat datang, Admin!</p>
+        {useDummyData && (
+          <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3 mb-4">
+            <p className="text-yellow-400 text-sm">⚠️ Using demo data (Backend not available)</p>
+          </div>
+        )}
         {user && (
           <div className="bg-dark-bg p-3 rounded-lg">
             <p className="text-sm text-white/50">Logged in as: @{user.username || 'N/A'}</p>
