@@ -10,16 +10,22 @@ import { GameProvider } from './context/GameContext'
 import WelcomeBonus from './components/WelcomeBonus'
 import LoadingScreen from './components/LoadingScreen'
 import Admin from './pages/Admin'
-import WebApp from '@twa-dev/sdk';
 
 // Environment variables
 const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN
 const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
+// Admin whitelist - tambahkan ID Telegram admin di sini
+const ADMIN_WHITELIST = [
+  7609121993, // ID Telegram Anda
+  // Tambahkan ID admin lain di sini jika diperlukan
+]
+
 function App() {
   const [isReady, setIsReady] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     // Initialize Telegram Web App
@@ -34,9 +40,24 @@ function App() {
     
     // Get user data from Telegram
     if (WebApp.initDataUnsafe?.user) {
-      setUser(WebApp.initDataUnsafe.user)
-      console.log('Telegram User:', WebApp.initDataUnsafe.user)
-      alert('User ID Telegram Anda: ' + WebApp.initDataUnsafe.user.id)
+      const telegramUser = WebApp.initDataUnsafe.user
+      setUser(telegramUser)
+      console.log('Telegram User:', telegramUser)
+      
+      // Check if user is admin
+      const isUserAdmin = ADMIN_WHITELIST.includes(telegramUser.id)
+      setIsAdmin(isUserAdmin)
+      
+      if (isUserAdmin) {
+        console.log('✅ User is admin!')
+      } else {
+        console.log('❌ User is not admin')
+      }
+      
+      // Show alert only for non-admin users to get their ID
+      if (!isUserAdmin) {
+        alert('User ID Telegram Anda: ' + telegramUser.id)
+      }
     }
     
     // Show loading for 3 seconds
@@ -59,7 +80,7 @@ function App() {
               <Route path="/coinflip" element={<CoinFlip />} />
               <Route path="/referrals" element={<Referrals />} />
               <Route path="/wallet" element={<Wallet />} />
-              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin" element={<Admin isAdmin={isAdmin} user={user} />} />
             </Routes>
             <Navigation />
           </div>
