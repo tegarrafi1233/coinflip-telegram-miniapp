@@ -8,47 +8,93 @@ interface Request {
   status: string;
 }
 
+interface User {
+  id: number;
+  username: string;
+  firstName: string;
+  lastName: string;
+  balance: number;
+  totalEarned: number;
+  referrals: number;
+  isNewUser: boolean;
+  hasWelcomeBonus: boolean;
+  freeFlips: number;
+  joinDate: string;
+}
+
+interface Stats {
+  totalUsers: number;
+  totalRequests: number;
+  pendingRequests: number;
+  totalDeposits: number;
+  totalWithdrawals: number;
+}
+
 interface AdminProps {
   isAdmin: boolean;
   user: any;
 }
 
-const API_URL = import.meta.env.VITE_BACKEND_URL + '/api/requests';
+const API_URL = import.meta.env.VITE_BACKEND_URL + '/api';
 
 const Admin: React.FC<AdminProps> = ({ isAdmin, user }) => {
   const [requests, setRequests] = useState<Request[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'requests' | 'users' | 'stats'>('requests');
 
-  // Ambil data dari backend
-  const fetchRequests = async () => {
+  // Fetch data from backend
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      setRequests(data);
+      const [requestsRes, usersRes, statsRes] = await Promise.all([
+        fetch(`${API_URL}/requests`),
+        fetch(`${API_URL}/users`),
+        fetch(`${API_URL}/stats`)
+      ]);
+      
+      const requestsData = await requestsRes.json();
+      const usersData = await usersRes.json();
+      const statsData = await statsRes.json();
+      
+      setRequests(requestsData);
+      setUsers(usersData);
+      setStats(statsData);
     } catch (error) {
-      console.error('Error fetching requests:', error);
+      console.error('Error fetching data:', error);
     }
     setLoading(false);
   };
 
   useEffect(() => {
     if (isAdmin) {
-      fetchRequests();
+      fetchData();
     }
   }, [isAdmin]);
 
   // Approve/Reject
   const handleAction = async (id: number, action: 'approved' | 'rejected') => {
     try {
-      await fetch(`${API_URL}/${id}/${action}`, { method: 'POST' });
-      fetchRequests(); // refresh data
+      await fetch(`${API_URL}/requests/${id}/${action}`, { method: 'POST' });
+      fetchData(); // refresh data
     } catch (error) {
       console.error('Error handling action:', error);
     }
   };
 
-  // Jika bukan admin, tampilkan pesan akses ditolak
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // If not admin, show access denied
   if (!isAdmin) {
     return (
       <div className="max-w-xl mx-auto py-8">
@@ -92,53 +138,188 @@ const Admin: React.FC<AdminProps> = ({ isAdmin, user }) => {
         )}
       </div>
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-white mb-4">📋 Deposit & Withdraw Requests</h2>
-        
-        {requests.length === 0 ? (
-          <div className="bg-dark-card p-6 rounded-xl border border-dark-border text-center">
-            <p className="text-white/70">Belum ada request yang masuk</p>
-          </div>
-        ) : (
-          requests.map(req => (
-            <div key={req.id} className="bg-dark-card p-4 rounded-xl border border-dark-border">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <div className="font-semibold text-white">
-                    {req.type.toUpperCase()} {req.amount} TON
-                  </div>
-                  <div className="text-sm text-white/70">User: {req.user}</div>
-                  <div className={`text-xs mt-1 px-2 py-1 rounded-full inline-block ${
-                    req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 
-                    req.status === 'approved' ? 'bg-green-500/20 text-green-400' : 
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    Status: {req.status}
-                  </div>
-                </div>
-                <div className="text-xs text-white/50">ID: {req.id}</div>
-              </div>
-              
-              {req.status === 'pending' && (
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleAction(req.id, 'approved')}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    ✅ Approve
-                  </button>
-                  <button
-                    onClick={() => handleAction(req.id, 'rejected')}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    ❌ Reject
-                  </button>
-                </div>
-              )}
-            </div>
-          ))
-        )}
+      {/* Tab Navigation */}
+      <div className="flex space-x-2 mb-6">
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'requests'
+              ? 'bg-coin-gold text-black'
+              : 'bg-dark-card text-white/70 hover:text-white'
+          }`}
+        >
+          📋 Requests
+        </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'users'
+              ? 'bg-coin-gold text-black'
+              : 'bg-dark-card text-white/70 hover:text-white'
+          }`}
+        >
+          👥 Users ({users.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('stats')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            activeTab === 'stats'
+              ? 'bg-coin-gold text-black'
+              : 'bg-dark-card text-white/70 hover:text-white'
+          }`}
+        >
+          📊 Stats
+        </button>
       </div>
+
+      {/* Requests Tab */}
+      {activeTab === 'requests' && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-white mb-4">📋 Deposit & Withdraw Requests</h2>
+          
+          {requests.length === 0 ? (
+            <div className="bg-dark-card p-6 rounded-xl border border-dark-border text-center">
+              <p className="text-white/70">Belum ada request yang masuk</p>
+            </div>
+          ) : (
+            requests.map(req => (
+              <div key={req.id} className="bg-dark-card p-4 rounded-xl border border-dark-border">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <div className="font-semibold text-white">
+                      {req.type.toUpperCase()} {req.amount} TON
+                    </div>
+                    <div className="text-sm text-white/70">User: {req.user}</div>
+                    <div className={`text-xs mt-1 px-2 py-1 rounded-full inline-block ${
+                      req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 
+                      req.status === 'approved' ? 'bg-green-500/20 text-green-400' : 
+                      'bg-red-500/20 text-red-400'
+                    }`}>
+                      Status: {req.status}
+                    </div>
+                  </div>
+                  <div className="text-xs text-white/50">ID: {req.id}</div>
+                </div>
+                
+                {req.status === 'pending' && (
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleAction(req.id, 'approved')}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      ✅ Approve
+                    </button>
+                    <button
+                      onClick={() => handleAction(req.id, 'rejected')}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      ❌ Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Users Tab */}
+      {activeTab === 'users' && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-white mb-4">👥 Registered Users</h2>
+          
+          {users.length === 0 ? (
+            <div className="bg-dark-card p-6 rounded-xl border border-dark-border text-center">
+              <p className="text-white/70">Belum ada user yang terdaftar</p>
+            </div>
+          ) : (
+            users.map(user => (
+              <div key={user.id} className="bg-dark-card p-4 rounded-xl border border-dark-border">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <div className="font-semibold text-white">
+                      {user.firstName} {user.lastName}
+                    </div>
+                    <div className="text-sm text-white/70">@{user.username}</div>
+                    <div className="text-xs text-white/50">ID: {user.id}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-coin-gold">{user.balance} TON</div>
+                    <div className="text-xs text-white/50">Balance</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="bg-dark-bg p-2 rounded">
+                    <div className="text-white/70">Total Earned</div>
+                    <div className="text-white font-medium">{user.totalEarned} TON</div>
+                  </div>
+                  <div className="bg-dark-bg p-2 rounded">
+                    <div className="text-white/70">Referrals</div>
+                    <div className="text-white font-medium">{user.referrals}</div>
+                  </div>
+                  <div className="bg-dark-bg p-2 rounded">
+                    <div className="text-white/70">Free Flips</div>
+                    <div className="text-white font-medium">{user.freeFlips}</div>
+                  </div>
+                </div>
+                
+                <div className="mt-3 text-xs text-white/50">
+                  Joined: {formatDate(user.joinDate)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Stats Tab */}
+      {activeTab === 'stats' && stats && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-white mb-4">📊 Platform Statistics</h2>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-dark-card p-4 rounded-xl border border-dark-border text-center">
+              <div className="text-2xl font-bold text-coin-gold">{stats.totalUsers}</div>
+              <div className="text-sm text-white/70">Total Users</div>
+            </div>
+            <div className="bg-dark-card p-4 rounded-xl border border-dark-border text-center">
+              <div className="text-2xl font-bold text-green-400">{stats.totalRequests}</div>
+              <div className="text-sm text-white/70">Total Requests</div>
+            </div>
+            <div className="bg-dark-card p-4 rounded-xl border border-dark-border text-center">
+              <div className="text-2xl font-bold text-yellow-400">{stats.pendingRequests}</div>
+              <div className="text-sm text-white/70">Pending Requests</div>
+            </div>
+            <div className="bg-dark-card p-4 rounded-xl border border-dark-border text-center">
+              <div className="text-2xl font-bold text-blue-400">{stats.totalDeposits}</div>
+              <div className="text-sm text-white/70">Total Deposits</div>
+            </div>
+          </div>
+          
+          <div className="bg-dark-card p-4 rounded-xl border border-dark-border">
+            <div className="text-lg font-semibold text-white mb-2">💰 Financial Summary</div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-white/70">Total Deposits:</span>
+                <span className="text-green-400 font-medium">{stats.totalDeposits} TON</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white/70">Total Withdrawals:</span>
+                <span className="text-red-400 font-medium">{stats.totalWithdrawals} TON</span>
+              </div>
+              <div className="border-t border-dark-border pt-2">
+                <div className="flex justify-between">
+                  <span className="text-white/70">Net Flow:</span>
+                  <span className={`font-medium ${stats.totalDeposits - stats.totalWithdrawals >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {stats.totalDeposits - stats.totalWithdrawals} TON
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

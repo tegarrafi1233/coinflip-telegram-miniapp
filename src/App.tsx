@@ -26,6 +26,8 @@ function App() {
   const [isReady, setIsReady] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [adminTapCount, setAdminTapCount] = useState(0)
+  const [showAdminAccess, setShowAdminAccess] = useState(false)
 
   useEffect(() => {
     // Initialize Telegram Web App
@@ -66,6 +68,23 @@ function App() {
     }, 3000)
   }, [])
 
+  // Secret admin access handler
+  const handleAdminTap = () => {
+    const newCount = adminTapCount + 1
+    setAdminTapCount(newCount)
+    
+    // Reset count after 3 seconds
+    setTimeout(() => {
+      setAdminTapCount(0)
+    }, 3000)
+    
+    // Show admin access after 5 taps
+    if (newCount >= 5) {
+      setShowAdminAccess(true)
+      setAdminTapCount(0)
+    }
+  }
+
   if (!isReady) {
     return <LoadingScreen />
   }
@@ -74,6 +93,51 @@ function App() {
     <GameProvider>
       <Router>
         <div className="min-h-screen bg-gradient-to-br from-dark-bg to-dark-card">
+          {/* Secret Admin Access Button */}
+          <div 
+            className="fixed top-4 left-4 z-50 cursor-pointer"
+            onClick={handleAdminTap}
+            title="Tap 5 times for admin access"
+          >
+            <div className="text-xs text-white/30 font-mono">
+              {adminTapCount > 0 ? `${adminTapCount}/5` : '•••'}
+            </div>
+          </div>
+
+          {/* Admin Access Modal */}
+          {showAdminAccess && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+              <div className="bg-dark-card p-6 rounded-xl border border-dark-border max-w-sm mx-4">
+                <h3 className="text-lg font-bold text-white mb-4">🔐 Admin Access</h3>
+                <p className="text-white/70 mb-4">
+                  {isAdmin 
+                    ? "You have admin privileges. Access admin panel?"
+                    : "You don't have admin privileges."
+                  }
+                </p>
+                <div className="flex space-x-2">
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setShowAdminAccess(false)
+                        window.location.href = '/admin'
+                      }}
+                      className="px-4 py-2 bg-coin-gold text-black rounded-lg font-medium"
+                    >
+                      Access Admin
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowAdminAccess(false)}
+                    className="px-4 py-2 bg-dark-border text-white rounded-lg font-medium"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="container mx-auto px-4 py-6">
             <Routes>
               <Route path="/" element={<Home />} />
@@ -81,6 +145,8 @@ function App() {
               <Route path="/referrals" element={<Referrals />} />
               <Route path="/wallet" element={<Wallet />} />
               <Route path="/admin" element={<Admin isAdmin={isAdmin} user={user} />} />
+              <Route path="/admin-panel" element={<Admin isAdmin={isAdmin} user={user} />} />
+              <Route path="/a" element={<Admin isAdmin={isAdmin} user={user} />} />
             </Routes>
             <Navigation />
           </div>
