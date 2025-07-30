@@ -10,6 +10,7 @@ import { GameProvider } from './context/GameContext'
 import WelcomeBonus from './components/WelcomeBonus'
 import LoadingScreen from './components/LoadingScreen'
 import Admin from './pages/Admin'
+import WebApp from '@twa-dev/sdk';
 
 // Environment variables
 const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN
@@ -35,6 +36,7 @@ function App() {
     if (WebApp.initDataUnsafe?.user) {
       setUser(WebApp.initDataUnsafe.user)
       console.log('Telegram User:', WebApp.initDataUnsafe.user)
+      alert('User ID Telegram Anda: ' + WebApp.initDataUnsafe.user.id)
     }
     
     // Show loading for 3 seconds
