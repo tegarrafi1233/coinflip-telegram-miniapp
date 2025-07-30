@@ -95,13 +95,11 @@ function App() {
         <div className="min-h-screen bg-gradient-to-br from-dark-bg to-dark-card">
           {/* Secret Admin Access Button */}
           <div 
-            className="fixed top-4 left-4 z-50 cursor-pointer"
+            className="fixed top-4 left-4 z-50 cursor-pointer w-8 h-8"
             onClick={handleAdminTap}
             title="Tap 5 times for admin access"
           >
-            <div className="text-xs text-white/30 font-mono">
-              {adminTapCount > 0 ? `${adminTapCount}/5` : '•••'}
-            </div>
+            {/* Completely transparent area - no visible elements */}
           </div>
 
           {/* Admin Access Modal */}
