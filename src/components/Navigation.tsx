@@ -1,6 +1,6 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Home, Coins, Users, Wallet } from 'lucide-react'
+import { Home, Coins, Users, Wallet, Shield } from 'lucide-react'
 
 const Navigation: React.FC = () => {
   const location = useLocation()
@@ -10,7 +10,8 @@ const Navigation: React.FC = () => {
     { path: '/', icon: Home, label: 'Home' },
     { path: '/coinflip', icon: Coins, label: 'Coin Flip' },
     { path: '/referrals', icon: Users, label: 'Referrals' },
-    { path: '/wallet', icon: Wallet, label: 'Wallet' }
+    { path: '/wallet', icon: Wallet, label: 'Wallet' },
+    { path: '/admin', icon: Shield, label: 'Admin' }
   ]
 
   return (
